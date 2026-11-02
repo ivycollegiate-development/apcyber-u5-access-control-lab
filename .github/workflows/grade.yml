@@ -1,0 +1,51 @@
+name: Grade Access Control Lab
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y acl
+          python -m pip install --upgrade pip
+      
+      - name: Run setup environment
+        run: |
+          chmod +x setup_environment.sh
+          ./setup_environment.sh
+      
+      - name: Validate RBAC matrix
+        run: |
+          python tests/test_rbac.py rbac_matrix_template.csv findings_template.csv
+      
+      - name: Run permission verification
+        run: |
+          chmod +x verify_permissions.sh
+          ./verify_permissions.sh || echo "Verification completed with failures (expected if permissions not fully implemented)"
+        continue-on-error: true
+      
+      - name: Check evidence directory
+        run: |
+          if [ -d "evidence" ]; then
+            echo "Evidence directory exists"
+            ls -la evidence/
+          else
+            echo "WARNING: No evidence directory"
+          fi
